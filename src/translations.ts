@@ -1,9 +1,9 @@
 export const dict: Record<string, any> = {
   en: {
-    translateTab: 'Translate',
+    translateTab: 'Talk',
     learningTab: 'Lessons',
     historyTab: 'History',
-    profileTab: 'Profile',
+    profileTab: 'Settings',
     title: 'SIGNOVA',
     subtitle: 'Classroom & Study Assistant',
     waiting: 'Waiting for gestures...',
@@ -70,10 +70,10 @@ export const dict: Record<string, any> = {
     },
   },
   ka: {
-    translateTab: 'თარგმანი',
-    learningTab: 'გაკვეთილები',
+    translateTab: 'საუბარი',
+    learningTab: 'სწავლა',
     historyTab: 'ისტორია',
-    profileTab: 'პროფილი',
+    profileTab: 'პარამეტრები',
     title: 'SIGNOVA',
     subtitle: 'სასწავლო ასისტენტი',
     waiting: 'ჟესტების მოლოდინში...',

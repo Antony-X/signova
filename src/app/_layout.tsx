@@ -1,16 +1,55 @@
+import { IBMPlexMono_400Regular, IBMPlexMono_500Medium } from '@expo-google-fonts/ibm-plex-mono';
+import { IBMPlexSans_400Regular, IBMPlexSans_500Medium, IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans';
+import { useFonts } from 'expo-font';
 import { Slot } from 'expo-router';
-import { createContext, useState } from 'react';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
+import { Platform, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-// Теперь контекст хранит и язык, и тему!
-export const LanguageContext = createContext<any>(null);
+import { AppContext, AppProvider, useApp } from '@/theme/app-context';
 
-export default function RootLayout() {
-  const [lang, setLang] = useState('en'); 
-  const [isDark, setIsDark] = useState(false); // Глобальное состояние темы
+/** Kept for older imports: the language/theme context now lives in `@/theme/app-context`. */
+export const LanguageContext = AppContext;
+
+function Shell() {
+  const { c, isDark } = useApp();
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    document.title = 'SIGNOVA: sign language translator for the classroom';
+    document.body.style.backgroundColor = c.bg;
+    document.documentElement.style.backgroundColor = c.bg;
+    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
+    let meta = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'theme-color';
+      document.head.appendChild(meta);
+    }
+    meta.content = c.bg;
+  }, [c.bg, isDark]);
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, isDark, setIsDark }}>
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Slot />
-    </LanguageContext.Provider>
+    </View>
+  );
+}
+
+export default function RootLayout() {
+  const [loaded] = useFonts({
+    IBMPlexSans_400Regular,
+    IBMPlexSans_500Medium,
+    IBMPlexSans_600SemiBold,
+    IBMPlexMono_400Regular,
+    IBMPlexMono_500Medium,
+  });
+
+  return (
+    <SafeAreaProvider>
+      <AppProvider>{loaded ? <Shell /> : <View style={{ flex: 1, backgroundColor: '#0f0f0f' }} />}</AppProvider>
+    </SafeAreaProvider>
   );
 }

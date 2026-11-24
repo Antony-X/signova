@@ -1,56 +1,40 @@
-# Welcome to your Expo app 👋
+# SIGNOVA
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Sign language translator for the classroom. A deaf student signs to the camera and the teacher reads the words. The teacher answers out loud, and an avatar signs the reply back in Georgian Sign Language (GESL).
 
-## Get started
+**Live demo:** https://antony-x.github.io/signova/ (open it on a phone or laptop and allow the camera and microphone)
 
-1. Install dependencies
+## The demo conversation
 
-   ```bash
-   npm install
-   ```
+1. **The student signs:** “შეგიძლიათ რომ ეს ამოცანა ამიხსნათ?” (Can you explain this problem to me?)
+   The camera tracks the body (33 points) and both hands (21 points each) live with MediaPipe. The words appear as the hands move.
+2. **The teacher answers by voice:** “რომელი ნაბიჯი ვერ გაიგე?” (Which step didn’t you understand?)
+   A live microphone meter runs and the words appear as the teacher speaks.
+3. **The student watches:** the avatar signs the answer word by word, and each word lights up as it is signed.
 
-2. Start the app
+Keyboard shortcuts on the conversation screen: **Space** moves to the next step and **R** starts again. The student's turn also starts on its own when raised hands start moving.
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run it
 
 ```bash
-npm run reset-project
+npm install
+npx expo start --web     # http://localhost:8081
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Pose tracking runs in the web build (Chrome, Edge or Safari, on desktop or phone). The camera needs `localhost` or HTTPS.
 
-### Other setup steps
+## Deploy to GitHub Pages
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+bash scripts/deploy-web.sh
+```
 
-## Learn more
+This exports the web build, adds the GitHub Pages fallbacks and pushes it to the `gh-pages` branch. The site's base path is set by `experiments.baseUrl` in `app.json`.
 
-To learn more about developing your project with Expo, look at the following resources:
+## How it is built
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- `src/app/conversation.tsx`: the three-step classroom flow.
+- `src/components/pose/`: the live camera with the MediaPipe pose, hand and face tracking drawn over the video.
+- `src/components/avatar/`: the signing avatar (an SVG rig with 2-bone IK and sign clips).
+- `src/theme/tokens.ts` and `src/components/ui/`: the one design system. It was dealt with [tasteskill](https://github.com/Leonxlnx/taste-skill): a near-black ground with one lime accent, IBM Plex Sans and Mono, and soft radii.
+- `public/models`, `public/mediapipe`: the MediaPipe models and WASM, served with the site so they work offline.

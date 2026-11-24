@@ -1,125 +1,152 @@
-import { useContext, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { dict } from '../../translations';
-import { LanguageContext } from '../_layout';
+import { router } from 'expo-router';
+import { ArrowRight, CaseSensitive, ChevronLeft, GraduationCap, MessageCircle, type LucideIcon } from 'lucide-react-native';
+import { useState } from 'react';
+import { ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type CategoryKey = 'alphabet' | 'basics' | 'medical';
+import { Button, Card, Enter, Txt } from '@/components/ui';
+import { usePageFrame, useScreens, type LessonKey } from '@/i18n/screens';
+import { useApp } from '@/theme/app-context';
+import { radius, space } from '@/theme/tokens';
 
-export default function LearningScreen() {
-  const { lang, isDark } = useContext(LanguageContext);
-  const t = dict[lang] || dict.en;
-  const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
+const CATS: { key: LessonKey; Icon: LucideIcon }[] = [
+  { key: 'alphabet', Icon: CaseSensitive },
+  { key: 'basics', Icon: MessageCircle },
+  { key: 'school', Icon: GraduationCap },
+];
 
-  const categories: { key: CategoryKey; icon: string; title: string; desc: string }[] = [
-    { key: 'alphabet', icon: '🔤', title: t.catAlphabet, desc: t.catAlphabetDesc },
-    { key: 'basics', icon: '👋', title: t.catBasics, desc: t.catBasicsDesc },
-    { key: 'medical', icon: '🏥', title: t.catMedical, desc: t.catMedicalDesc },
-  ];
+export default function LessonsScreen() {
+  const { c } = useApp();
+  const s = useScreens().lessons;
+  const { gutter, maxWidth, narrow, wide } = usePageFrame();
+  const insets = useSafeAreaInsets();
+  const [open, setOpen] = useState<LessonKey | null>(null);
 
-  if (selectedCategory) {
-    const activeCat = categories.find((c) => c.key === selectedCategory);
-    const items = t.lessons[selectedCategory] || [];
-
-    return (
-      <ScrollView style={[styles.container, isDark && styles.containerDark]} contentContainerStyle={styles.content}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity style={[styles.backBtn, isDark && styles.btnDark]} onPress={() => setSelectedCategory(null)}>
-            <Text style={[styles.backBtnText, isDark && styles.btnTextDark]}>{t.backBtn}</Text>
-          </TouchableOpacity>
-          <Text style={[styles.title, isDark && styles.textDark]}>{activeCat?.title}</Text>
-        </View>
-
-        <View style={styles.grid}>
-          {items.map((item: { id: string; title: string; desc: string }) => (
-            <View key={item.id} style={[styles.lessonCard, isDark && styles.cardDark]}>
-              <Text style={[styles.lessonTitle, isDark && styles.textDark]}>{item.title}</Text>
-              <Text style={[styles.lessonDesc, isDark && styles.subTextDark]}>{item.desc}</Text>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
-    );
-  }
+  const cat = open ? s.cats[open] : null;
+  const items = open ? s.items[open] : [];
 
   return (
-    <ScrollView style={[styles.container, isDark && styles.containerDark]} contentContainerStyle={styles.content}>
-      <Text style={[styles.title, isDark && styles.textDark]}>{t.learningTitle}</Text>
-      <Text style={[styles.subtitle, isDark && styles.subTextDark]}>{t.learningSub}</Text>
-
-      <View style={styles.grid}>
-        {categories.map((cat) => (
-          <TouchableOpacity
-            key={cat.key}
-            style={[styles.card, isDark && styles.cardDark]}
-            onPress={() => setSelectedCategory(cat.key)}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.iconBox, isDark && styles.iconBoxDark]}>
-              <Text style={styles.icon}>{cat.icon}</Text>
-            </View>
-            <Text style={[styles.cardTitle, isDark && styles.textDark]}>{cat.title}</Text>
-            <Text style={[styles.cardDesc, isDark && styles.subTextDark]}>{cat.desc}</Text>
-          </TouchableOpacity>
-        ))}
+    <ScrollView
+      key={open ?? 'all'}
+      style={{ flex: 1, backgroundColor: c.bg }}
+      contentContainerStyle={{
+        paddingTop: wide ? space[7] : insets.top + space[5],
+        paddingBottom: space[8],
+        paddingHorizontal: gutter,
+      }}>
+      <View style={{ width: '100%', maxWidth }}>
+        {cat ? (
+          <>
+            <Enter from="line">
+              <Button
+                kind="secondary"
+                arrow={false}
+                label={s.back}
+                icon={<ChevronLeft size={18} strokeWidth={1.75} color={c.ink} />}
+                onPress={() => setOpen(null)}
+                style={{ marginLeft: -space[1], marginBottom: space[4] }}
+              />
+              <Txt v="h2">{cat.title}</Txt>
+              <Txt v="lead" muted style={{ marginTop: space[2] }}>
+                {cat.line}
+              </Txt>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: space[5], marginTop: space[3] }}>
+                <Txt v="mono" muted>
+                  {s.meta(items.length, cat.min)}
+                </Txt>
+                <Button kind="secondary" label={s.practice} onPress={() => router.push('/')} style={{ marginLeft: -space[1] }} />
+              </View>
+            </Enter>
+            <Enter delay={120} style={{ marginTop: space[6], gap: space[4] }}>
+              {rows(items, wide ? 2 : 1).map((row, r) => (
+                <View key={r} style={{ flexDirection: 'row', gap: space[4] }}>
+                  {row.map((it, i) => (
+                    <Card key={it.id} style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: space[3] }}>
+                        <Txt v="mono" muted style={{ width: 22 }}>
+                          {String(r * (wide ? 2 : 1) + i + 1).padStart(2, '0')}
+                        </Txt>
+                        <Txt v="h3" style={{ flex: 1 }}>
+                          {it.name}
+                        </Txt>
+                      </View>
+                      <Txt style={{ marginTop: space[2], marginLeft: 22 + space[3] }}>{it.how}</Txt>
+                    </Card>
+                  ))}
+                  {wide && row.length === 1 && <View style={{ flex: 1 }} />}
+                </View>
+              ))}
+            </Enter>
+          </>
+        ) : (
+          <>
+            <Enter from="line">
+              <Txt v="h2">{s.title}</Txt>
+              <Txt v="lead" muted style={{ marginTop: space[2] }}>
+                {s.sub}
+              </Txt>
+            </Enter>
+            <Enter delay={120} style={{ marginTop: space[6], flexDirection: wide ? 'row' : 'column', gap: space[4] }}>
+              {CATS.map(({ key, Icon }) => {
+                const k = s.cats[key];
+                const meta = s.meta(s.items[key].length, k.min);
+                const tile = (
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: radius.md,
+                      backgroundColor: c.raised,
+                      borderWidth: 1,
+                      borderColor: c.line,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <Icon size={20} strokeWidth={1.75} color={c.ink} />
+                  </View>
+                );
+                return (
+                  <Card key={key} onPress={() => setOpen(key)} accessibilityLabel={k.title} style={wide ? { flex: 1 } : null}>
+                    {wide ? (
+                      <>
+                        {tile}
+                        <Txt v="h3" style={{ marginTop: space[5] }}>
+                          {k.title}
+                        </Txt>
+                        <Txt style={{ marginTop: space[1] }}>{k.line}</Txt>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto', paddingTop: space[5] }}>
+                          <Txt v="mono" muted>
+                            {meta}
+                          </Txt>
+                          <ArrowRight size={16} strokeWidth={1.75} color={c.muted} />
+                        </View>
+                      </>
+                    ) : (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space[4] }}>
+                        {tile}
+                        <View style={{ flex: 1 }}>
+                          <Txt v="h3">{k.title}</Txt>
+                          <Txt style={{ marginTop: 2 }}>{k.line}</Txt>
+                          <Txt v="mono" muted style={{ marginTop: space[2] }}>
+                            {meta}
+                          </Txt>
+                        </View>
+                        {!narrow && <ArrowRight size={16} strokeWidth={1.75} color={c.muted} />}
+                      </View>
+                    )}
+                  </Card>
+                );
+              })}
+            </Enter>
+          </>
+        )}
       </View>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  content: { padding: 28, paddingBottom: 40 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 20 },
-  title: { fontSize: 30, fontWeight: '800', color: '#0f172a' },
-  subtitle: { fontSize: 15, color: '#64748b', marginTop: 4, marginBottom: 24 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-
-  card: {
-    width: '31%',
-    minWidth: 190,
-    flexGrow: 1,
-    backgroundColor: '#ffffff',
-    padding: 22,
-    borderRadius: 20,
-    alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-  },
-  iconBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: '#eff6ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  iconBoxDark: { backgroundColor: '#1e293b' },
-  icon: { fontSize: 28 },
-  cardTitle: { fontSize: 17, fontWeight: '700', color: '#0f172a', textAlign: 'center' },
-  cardDesc: { fontSize: 13, color: '#64748b', marginTop: 4, textAlign: 'center' },
-
-  backBtn: { paddingVertical: 8, paddingHorizontal: 14, backgroundColor: '#e2e8f0', borderRadius: 10 },
-  backBtnText: { fontSize: 14, fontWeight: '600', color: '#334155' },
-  lessonCard: {
-    width: '31%',
-    minWidth: 200,
-    flexGrow: 1,
-    backgroundColor: '#ffffff',
-    padding: 20,
-    borderRadius: 18,
-    elevation: 2,
-  },
-  lessonTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a', marginBottom: 8 },
-  lessonDesc: { fontSize: 14, color: '#475569', lineHeight: 20 },
-
-  containerDark: { backgroundColor: '#020617' },
-  textDark: { color: '#f8fafc' },
-  subTextDark: { color: '#94a3b8' },
-  cardDark: { backgroundColor: '#0f172a' },
-  btnDark: { backgroundColor: '#1e293b' },
-  btnTextDark: { color: '#cbd5e1' },
-});
+function rows<T>(list: T[], n: number) {
+  const out: T[][] = [];
+  for (let i = 0; i < list.length; i += n) out.push(list.slice(i, i + n));
+  return out;
+}

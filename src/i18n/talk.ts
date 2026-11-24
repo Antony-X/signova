@@ -1,0 +1,123 @@
+/** Strings for the home screen and the classroom conversation. */
+import { useApp } from '@/theme/app-context';
+
+const en = {
+  // home
+  h1: 'Sign language translator for the classroom',
+  lead: 'The student signs to the camera and the teacher reads the words. The teacher answers out loud, and an avatar signs the reply.',
+  facts: ['Georgian Sign Language', '75 tracked body and hand points', 'Runs in the browser'],
+  start: 'Start a conversation',
+  practise: 'Practise the signs',
+  steps: [
+    { title: 'The student signs', body: 'The camera follows both hands and the body.' },
+    { title: 'The teacher answers out loud', body: 'Speech turns into text on the screen.' },
+    { title: 'The avatar signs it back', body: 'Word by word, in Georgian Sign Language.' },
+  ],
+  heroLabel: 'Avatar',
+  // conversation
+  title: 'Classroom conversation',
+  back: 'Back',
+  student: 'Student',
+  teacher: 'Teacher',
+  signs: 'signs',
+  speaks: 'speaks',
+  promptStudent: 'Sign the question to the camera',
+  reading: 'Reading signs',
+  translated: 'Translated from GESL',
+  promptTeacher: 'Answer out loud when the question appears',
+  waitTeacher: 'Waiting for the student',
+  listening: 'Listening',
+  heard: 'Heard in Georgian',
+  signing: 'Signing the answer',
+  signed: 'Signed in GESL',
+  startSigning: 'Start signing',
+  answer: 'Answer by voice',
+  stop: 'Stop listening',
+  replay: 'Replay the signs',
+  again: 'Start again',
+  stepNames: ['Student signs', 'Teacher answers', 'Student watches'],
+  keys: 'Space: next step · R: start again',
+  playVoice: 'Read it aloud',
+  narr: {
+    ready: ['The student asks a question in sign language', 'The green lines are SIGNOVA tracking the hands and body in real time.'],
+    reading: ['SIGNOVA reads the signs', 'Each movement is matched to a GESL sign and written as Georgian text.'],
+    translated: ['The teacher answers out loud', 'The question is on the screen. Now SIGNOVA listens to the teacher.'],
+    listening: ['SIGNOVA listens to the teacher', 'Speech turns into text while the teacher talks.'],
+    signing: ['The avatar signs the answer', 'The reply is shown in Georgian Sign Language, one sign at a time.'],
+    done: ['The student understands the answer', 'A full conversation both ways, with no interpreter in the room.'],
+  } as Record<string, [string, string]>,
+  live: 'Live tracking',
+  starting: 'Starting the camera',
+  hands: 'Hands',
+  body: 'Body points',
+  face: 'Face points',
+  micOn: 'Microphone on',
+  stt: 'Speech to text',
+  avatarReady: 'Avatar ready',
+  signOf: (i: number, n: number) => `Sign ${i} of ${n}`,
+  step: (i: number) => `Step ${i} of 3`,
+};
+
+
+type Strings = typeof en;
+
+const ka: Strings = {
+  h1: 'ჟესტური ენის თარჯიმანი საკლასო ოთახისთვის',
+  lead: 'მოსწავლე კამერის წინ ჟესტებით საუბრობს, მასწავლებელი კი ტექსტს კითხულობს. მასწავლებელი ხმამაღლა პასუხობს, ავატარი კი პასუხს ჟესტებით აჩვენებს.',
+  facts: ['ქართული ჟესტური ენა', 'სხეულისა და ხელის 75 წერტილი', 'მუშაობს ბრაუზერში'],
+  start: 'საუბრის დაწყება',
+  practise: 'ჟესტების ვარჯიში',
+  steps: [
+    { title: 'მოსწავლე ჟესტებით საუბრობს', body: 'კამერა ორივე ხელსა და სხეულს ადევნებს თვალს.' },
+    { title: 'მასწავლებელი ხმით პასუხობს', body: 'მეტყველება ეკრანზე ტექსტად იქცევა.' },
+    { title: 'ავატარი პასუხს ჟესტებით აჩვენებს', body: 'სიტყვა-სიტყვით, ქართულ ჟესტურ ენაზე.' },
+  ],
+  heroLabel: 'ავატარი',
+  title: 'საკლასო საუბარი',
+  back: 'უკან',
+  student: 'მოსწავლე',
+  teacher: 'მასწავლებელი',
+  signs: 'ჟესტები',
+  speaks: 'ხმა',
+  promptStudent: 'აჩვენეთ კითხვა კამერას ჟესტებით',
+  reading: 'ჟესტების ამოცნობა',
+  translated: 'ნათარგმნია ქართული ჟესტური ენიდან',
+  promptTeacher: 'უპასუხეთ ხმამაღლა, როცა კითხვა გამოჩნდება',
+  waitTeacher: 'ველოდებით მოსწავლეს',
+  listening: 'გისმენთ',
+  heard: 'მოსმენილია ქართულად',
+  signing: 'პასუხი ჟესტებით',
+  signed: 'ნაჩვენებია ქართულ ჟესტურ ენაზე',
+  startSigning: 'ჟესტების დაწყება',
+  answer: 'ხმით პასუხი',
+  stop: 'მოსმენის შეწყვეტა',
+  replay: 'ჟესტების გამეორება',
+  again: 'თავიდან დაწყება',
+  stepNames: ['მოსწავლე ჟესტებით', 'მასწავლებელი ხმით', 'მოსწავლე უყურებს'],
+  keys: 'Space: შემდეგი ნაბიჯი · R: თავიდან',
+  playVoice: 'ხმამაღლა წაკითხვა',
+  narr: {
+    ready: ['მოსწავლე კითხვას ჟესტური ენით სვამს', 'მწვანე ხაზები აჩვენებს, როგორ ადევნებს SIGNOVA თვალს ხელებსა და სხეულს რეალურ დროში.'],
+    reading: ['SIGNOVA ჟესტებს კითხულობს', 'ყოველი მოძრაობა ქართული ჟესტური ენის ჟესტს უკავშირდება და ქართულ ტექსტად იწერება.'],
+    translated: ['მასწავლებელი ხმამაღლა პასუხობს', 'კითხვა ეკრანზეა. ახლა SIGNOVA მასწავლებელს უსმენს.'],
+    listening: ['SIGNOVA მასწავლებელს უსმენს', 'მეტყველება ტექსტად იქცევა, როცა მასწავლებელი საუბრობს.'],
+    signing: ['ავატარი პასუხს ჟესტებით აჩვენებს', 'პასუხი ქართულ ჟესტურ ენაზე ჩანს, ჟესტი ჟესტზე.'],
+    done: ['მოსწავლემ პასუხი გაიგო', 'სრული საუბარი ორივე მიმართულებით, თარჯიმნის გარეშე.'],
+  },
+  live: 'ცოცხალი თვალყური',
+  starting: 'კამერა ირთვება',
+  hands: 'ხელები',
+  body: 'სხეულის წერტილები',
+  face: 'სახის წერტილები',
+  micOn: 'მიკროფონი ჩართულია',
+  stt: 'მეტყველება ტექსტად',
+  avatarReady: 'ავატარი მზადაა',
+  signOf: (i: number, n: number) => `ჟესტი ${i} / ${n}`,
+  step: (i: number) => `ნაბიჯი ${i} / 3`,
+};
+
+
+export function useTalk() {
+  const { lang } = useApp();
+  return lang === 'ka' ? ka : en;
+}

@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "signova-app",
+    "name": "SIGNOVA",
     "slug": "signova-app",
     "version": "1.0.0",
     "orientation": "default",
     "scheme": "myapp",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true
     },
@@ -14,12 +14,20 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "SIGNOVA нужен доступ к камере для перевода жестов."
+          "cameraPermission": "SIGNOVA uses the camera to read sign language."
         }
       ]
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "baseUrl": "/signova"
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "bundler": "metro",
+      "backgroundColor": "#0f0f0f",
+      "themeColor": "#0f0f0f"
     }
   }
 }

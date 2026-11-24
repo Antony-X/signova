@@ -1,303 +1,189 @@
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useContext, useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { dict } from '../../translations';
-import { LanguageContext } from '../_layout';
+import { useRouter } from 'expo-router';
+import { Hand, Mic, ScanEye } from 'lucide-react-native';
+import { useState } from 'react';
+import { ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function TranslateScreen() {
-  const { lang, isDark } = useContext(LanguageContext);
-  const t = dict[lang] || dict.en;
-  const [permission, requestPermission] = useCameraPermissions();
+import SignAvatar from '@/components/avatar-slot';
+import { Button, Enter, LiveDot, Txt, Wordmark } from '@/components/ui';
+import { STUDENT } from '@/demo/script';
+import { useTalk } from '@/i18n/talk';
+import { useApp } from '@/theme/app-context';
+import { LIME, radius, space, type } from '@/theme/tokens';
 
-  const [activeMode, setActiveMode] = useState<'textVoice' | 'gesture' | null>(null);
-  const [direction, setDirection] = useState<'g2t' | 't2g'>('g2t');
-  const [textLang, setTextLang] = useState('EN');
-  const [signLang, setSignLang] = useState('GESL');
-  const [inputText, setInputText] = useState('');
-  const [translatedText, setTranslatedText] = useState(t.waiting);
-  const [demoIndex, setDemoIndex] = useState(0);
+const STEP_ICONS = [Hand, Mic, ScanEye];
+const STUDENT_WORDS = STUDENT.ka.split(' ');
 
-  useEffect(() => {
-    setTranslatedText(t.waiting);
-    setDemoIndex(0);
-  }, [lang, activeMode]);
+export default function HomeScreen() {
+  const { c, wide, width, height } = useApp();
+  const s = useTalk();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const [word, setWord] = useState(0);
 
-  const handleNextDemo = () => {
-    const phrases = t.demoPhrases || ['Hello! I have a question about the lesson.'];
-    setTranslatedText(phrases[demoIndex % phrases.length]);
-    setDemoIndex((prev) => prev + 1);
-  };
+  const gutter = wide ? space[7] : space[5];
+  const h1Size = wide ? Math.min(56, Math.max(40, width * 0.036)) : width < 380 ? 32 : 36;
 
-  if (activeMode === null) {
-    return (
-      <ScrollView
-        style={[styles.fullBg, isDark && styles.bgDark]}
-        contentContainerStyle={styles.menuContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text style={[styles.title, isDark && styles.textDark]}>{t.title}</Text>
-        <Text style={[styles.subtitle, isDark && styles.subTextDark]}>{t.subtitle}</Text>
+  const words = (
+    <View style={{ gap: wide ? space[5] : space[4] }}>
+      <Enter from="line">
+        <Txt
+          accessibilityRole="header"
+          style={[type.display, { fontSize: h1Size, lineHeight: h1Size * 1.06, letterSpacing: -h1Size * 0.03, maxWidth: 620 }]}>
+          {s.h1}
+        </Txt>
+      </Enter>
+      <Enter delay={300}>
+        <Txt v="lead" style={{ maxWidth: 540, fontSize: wide ? 18 : 16, lineHeight: wide ? 28 : 25 }}>
+          {s.lead}
+        </Txt>
+      </Enter>
+      <Enter delay={360} style={{ flexDirection: wide ? 'row' : 'column', flexWrap: 'wrap', columnGap: space[3], rowGap: 4 }}>
+        {s.facts.map((f, i) => (
+          <Txt key={i} v="mono" muted>
+            {i > 0 && wide ? '·  ' : ''}
+            {f}
+          </Txt>
+        ))}
+      </Enter>
+      <Enter delay={420} style={{ flexDirection: wide ? 'row' : 'column', alignItems: wide ? 'center' : 'stretch', gap: wide ? space[5] : space[3], marginTop: space[2] }}>
+        <Button label={s.start} onPress={() => router.push('/conversation')} full={!wide} />
+        <Button label={s.practise} kind="secondary" onPress={() => router.push('/learning')} style={wide ? undefined : { alignSelf: 'center' }} />
+      </Enter>
+    </View>
+  );
 
-        <View style={styles.cardsRow}>
-          <TouchableOpacity
-            style={[styles.modeCard, isDark && styles.cardDark]}
-            onPress={() => setActiveMode('textVoice')}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.iconCircle, isDark && styles.iconCircleDark]}>
-              <Text style={styles.modeCardIcon}>💬</Text>
+  const steps = (
+    <Enter delay={480} style={{ borderTopWidth: 1, borderTopColor: c.line }}>
+      {s.steps.map((st, i) => {
+        const Icon = STEP_ICONS[i];
+        return (
+          <View
+            key={i}
+            style={{ flexDirection: 'row', gap: space[4], paddingVertical: space[4], borderBottomWidth: 1, borderBottomColor: c.line, alignItems: 'flex-start' }}>
+            <Txt v="mono" muted style={{ width: 24, paddingTop: 2 }}>
+              0{i + 1}
+            </Txt>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Txt v="body" style={{ fontFamily: type.label.fontFamily }}>
+                {st.title}
+              </Txt>
+              <Txt v="small" muted>
+                {st.body}
+              </Txt>
             </View>
-            <Text style={[styles.modeCardText, isDark && styles.textDark]}>{t.modeTextVoice}</Text>
-            <Text style={[styles.modeCardDesc, isDark && styles.subTextDark]}>{t.modeTextVoiceDesc}</Text>
-          </TouchableOpacity>
+            <Icon size={20} strokeWidth={1.75} color={c.muted} />
+          </View>
+        );
+      })}
+    </Enter>
+  );
 
-          <TouchableOpacity
-            style={[styles.modeCard, isDark && styles.cardDark]}
-            onPress={() => setActiveMode('gesture')}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.iconCircle, isDark && styles.iconCircleDark]}>
-              <Text style={styles.modeCardIcon}>🤲</Text>
-            </View>
-            <Text style={[styles.modeCardText, isDark && styles.textDark]}>{t.modeGesture}</Text>
-            <Text style={[styles.modeCardDesc, isDark && styles.subTextDark]}>{t.modeGestureDesc}</Text>
-          </TouchableOpacity>
+  const stage = (
+    <Enter from="settle" style={{ flex: 1 }}>
+      <View
+        style={{
+          flex: 1,
+          minHeight: wide ? undefined : Math.min(420, Math.max(300, width * 0.95)),
+          backgroundColor: c.stage,
+          borderRadius: radius.lg,
+          borderWidth: 1,
+          borderColor: c.line,
+          overflow: 'hidden',
+        }}>
+        <DotGrid />
+        <SignAvatar glosses={STUDENT.glosses} playing loop onWord={setWord} style={{ position: 'absolute', top: 40, left: 0, right: 0, bottom: 72 }} />
+        {/* HUD */}
+        <View style={{ position: 'absolute', top: space[4], left: space[4], right: space[4], flexDirection: 'row', justifyContent: 'space-between' }}>
+          <View style={hudChip}>
+            <LiveDot color={LIME} size={7} />
+            <Txt v="mono" color="#fff">
+              {s.heroLabel} · GESL
+            </Txt>
+          </View>
+          <View style={hudChip}>
+            <Txt v="mono" color="rgba(255,255,255,0.7)">
+              {String(word + 1).padStart(2, '0')} / {String(STUDENT_WORDS.length).padStart(2, '0')}
+            </Txt>
+          </View>
         </View>
-      </ScrollView>
-    );
-  }
+        <View style={{ position: 'absolute', left: space[4], right: space[4], bottom: space[4], flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>
+          {STUDENT_WORDS.map((w, i) => (
+            <View
+              key={i}
+              style={{
+                paddingHorizontal: 10,
+                height: 32,
+                borderRadius: radius.sm,
+                justifyContent: 'center',
+                backgroundColor: i === word ? LIME : 'rgba(255,255,255,0.06)',
+              }}>
+              <Txt v="small" color={i === word ? '#0f0f0f' : 'rgba(255,255,255,0.72)'} style={{ fontFamily: type.label.fontFamily }}>
+                {w}
+              </Txt>
+            </View>
+          ))}
+        </View>
+      </View>
+    </Enter>
+  );
 
-  if (!permission) return <View style={[styles.fullBg, isDark && styles.bgDark]} />;
-  if (!permission.granted) {
+  if (wide) {
     return (
-      <View style={[styles.centerContainer, isDark && styles.bgDark]}>
-        <Text style={[styles.alertText, isDark && styles.textDark]}>{t.needCamera}</Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.button}>
-          <Text style={styles.buttonText}>{t.allowCamera}</Text>
-        </TouchableOpacity>
+      <View style={{ flex: 1, backgroundColor: c.bg, flexDirection: 'row', padding: gutter, paddingTop: insets.top + space[6], gap: space[7] }}>
+        <ScrollView style={{ flex: 1, maxWidth: 600 }} contentContainerStyle={{ flexGrow: 1, gap: space[7], justifyContent: 'space-between' }} showsVerticalScrollIndicator={false}>
+          <Wordmark />
+          {words}
+          {steps}
+        </ScrollView>
+        <View style={{ flex: 1.1, minHeight: Math.min(760, height - insets.top - gutter * 2) }}>{stage}</View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, isDark && styles.bgDark]}>
-      <View style={styles.mediaColumn}>
-        {activeMode === 'textVoice' && direction === 't2g' ? (
-          <View style={styles.avatarSection}>
-            <Text style={styles.avatarEmoji}>🤖</Text>
-            <Text style={styles.avatarText}>{t.avatarMock}</Text>
-            {inputText.length > 0 && (
-              <View style={styles.avatarBubble}>
-                <Text style={styles.avatarBubbleText}>"{inputText}"</Text>
-              </View>
-            )}
-          </View>
-        ) : (
-          <CameraView style={styles.camera} facing="front" />
-        )}
-      </View>
-
-      <ScrollView
-        style={styles.controlsColumn}
-        contentContainerStyle={styles.controlsContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.headerRow}>
-          <TouchableOpacity style={[styles.backButton, isDark && styles.btnDark]} onPress={() => setActiveMode(null)}>
-            <Text style={[styles.backButtonText, isDark && styles.btnTextDark]}>{t.backBtn}</Text>
-          </TouchableOpacity>
-          <Text style={[styles.activeModeTitle, isDark && styles.textDark]} numberOfLines={1}>
-            {activeMode === 'textVoice' ? t.modeTextVoice : t.modeGesture}
-          </Text>
-        </View>
-
-        {activeMode === 'textVoice' && (
-          <View style={styles.configArea}>
-            <View style={styles.toggleRow}>
-              <TouchableOpacity
-                style={[styles.pill, isDark && styles.btnDark, direction === 'g2t' && styles.pillActive]}
-                onPress={() => setDirection('g2t')}
-              >
-                <Text style={[styles.pillText, isDark && styles.btnTextDark, direction === 'g2t' && styles.pillTextActive]}>
-                  {t.dirG2T}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.pill, isDark && styles.btnDark, direction === 't2g' && styles.pillActive]}
-                onPress={() => setDirection('t2g')}
-              >
-                <Text style={[styles.pillText, isDark && styles.btnTextDark, direction === 't2g' && styles.pillTextActive]}>
-                  {t.dirT2G}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <Text style={[styles.label, isDark && styles.subTextDark]}>{t.textLangTitle}</Text>
-            <View style={styles.toggleRow}>
-              {['EN', 'KA'].map((l) => (
-                <TouchableOpacity
-                  key={l}
-                  style={[styles.pill, isDark && styles.btnDark, textLang === l && styles.pillActive]}
-                  onPress={() => setTextLang(l)}
-                >
-                  <Text style={[styles.pillText, isDark && styles.btnTextDark, textLang === l && styles.pillTextActive]}>
-                    {l}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {activeMode === 'gesture' && (
-          <View style={styles.configArea}>
-            <Text style={[styles.label, isDark && styles.subTextDark]}>{t.signLangTitle}</Text>
-            <View style={styles.toggleRow}>
-              {['GESL', 'ASL'].map((l) => (
-                <TouchableOpacity
-                  key={l}
-                  style={[styles.pill, isDark && styles.btnDark, signLang === l && styles.pillActive]}
-                  onPress={() => setSignLang(l)}
-                >
-                  <Text style={[styles.pillText, isDark && styles.btnTextDark, signLang === l && styles.pillTextActive]}>
-                    {l}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {activeMode === 'textVoice' && direction === 't2g' ? (
-          <View>
-            <TextInput
-              style={[styles.textInput, isDark && styles.inputDark]}
-              placeholder={t.typeText}
-              placeholderTextColor={isDark ? '#9ca3af' : '#6b7280'}
-              value={inputText}
-              onChangeText={setInputText}
-              multiline
-            />
-            <Text style={[styles.label, isDark && styles.subTextDark]}>{t.quickExamplesTitle}</Text>
-            <View style={styles.chipsWrap}>
-              {(t.teacherExamples || []).map((phrase: string, idx: number) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={[styles.chip, isDark && styles.btnDark]}
-                  onPress={() => setInputText(phrase)}
-                >
-                  <Text style={[styles.chipText, isDark && styles.btnTextDark]}>{phrase}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        ) : (
-          <View>
-            <View style={[styles.chatBox, isDark && styles.cardDark]}>
-              <Text style={[styles.translationText, isDark && styles.textDark]}>{translatedText}</Text>
-            </View>
-            <TouchableOpacity style={styles.button} onPress={handleNextDemo}>
-              <Text style={styles.buttonText}>{t.testBtn}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
-    </View>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: c.bg }}
+      contentContainerStyle={{ paddingHorizontal: gutter, paddingTop: insets.top + space[4], paddingBottom: space[7], gap: space[6] }}
+      showsVerticalScrollIndicator={false}>
+      <Wordmark size={18} />
+      {words}
+      <View style={{ height: Math.min(440, Math.max(320, width * 1.0)) }}>{stage}</View>
+      {steps}
+    </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  fullBg: { flex: 1, backgroundColor: '#f8fafc' },
-  menuContainer: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 28 },
-  title: { fontSize: 36, fontWeight: '800', color: '#0f172a', letterSpacing: 1 },
-  subtitle: { fontSize: 16, color: '#64748b', marginTop: 6, marginBottom: 28 },
-  cardsRow: { flexDirection: 'row', gap: 20, width: '100%', maxWidth: 680, justifyContent: 'center' },
-  modeCard: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-    padding: 24,
-    borderRadius: 22,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  iconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: '#eff6ff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  iconCircleDark: { backgroundColor: '#1e293b' },
-  modeCardIcon: { fontSize: 32 },
-  modeCardText: { fontSize: 18, fontWeight: '700', color: '#0f172a', textAlign: 'center' },
-  modeCardDesc: { fontSize: 13, color: '#64748b', marginTop: 6, textAlign: 'center' },
+const hudChip = {
+  flexDirection: 'row' as const,
+  alignItems: 'center' as const,
+  gap: 8,
+  height: 30,
+  paddingHorizontal: 10,
+  borderRadius: radius.sm,
+  backgroundColor: 'rgba(255,255,255,0.06)',
+};
 
-  container: { flex: 1, flexDirection: 'row', backgroundColor: '#f8fafc' },
-  centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  alertText: { fontSize: 18, textAlign: 'center', marginBottom: 20, color: '#0f172a' },
-
-  mediaColumn: { flex: 1.05, backgroundColor: '#000' },
-  camera: { flex: 1 },
-  avatarSection: { flex: 1, backgroundColor: '#1e293b', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  avatarEmoji: { fontSize: 52, marginBottom: 12 },
-  avatarText: { color: '#cbd5e1', fontSize: 18, fontWeight: '600', textAlign: 'center', lineHeight: 26 },
-  avatarBubble: { marginTop: 16, backgroundColor: '#0f172a', padding: 12, borderRadius: 12, maxWidth: '90%' },
-  avatarBubbleText: { color: '#93c5fd', fontSize: 14, textAlign: 'center', fontStyle: 'italic' },
-
-  controlsColumn: { flex: 1 },
-  controlsContent: { padding: 20, paddingBottom: 32 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  backButton: { paddingVertical: 8, paddingHorizontal: 14, backgroundColor: '#e2e8f0', borderRadius: 10 },
-  backButtonText: { fontSize: 14, fontWeight: '600', color: '#334155' },
-  activeModeTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a', flex: 1 },
-
-  configArea: { marginBottom: 12 },
-  label: { fontSize: 13, color: '#64748b', marginBottom: 8, fontWeight: '600' },
-  toggleRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  pill: { flex: 1, paddingVertical: 10, backgroundColor: '#e2e8f0', borderRadius: 12, alignItems: 'center' },
-  pillActive: { backgroundColor: '#2563eb' },
-  pillText: { fontSize: 13, fontWeight: '600', color: '#475569' },
-  pillTextActive: { color: '#ffffff' },
-
-  chatBox: {
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 16,
-    minHeight: 100,
-    justifyContent: 'center',
-    marginBottom: 14,
-    elevation: 2,
-  },
-  textInput: {
-    backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 16,
-    minHeight: 90,
-    fontSize: 16,
-    textAlignVertical: 'top',
-    marginBottom: 14,
-    color: '#0f172a',
-    elevation: 2,
-  },
-  chipsWrap: { gap: 8, marginBottom: 14 },
-  chip: { backgroundColor: '#e2e8f0', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10 },
-  chipText: { fontSize: 13, color: '#334155', fontWeight: '500' },
-
-  translationText: { fontSize: 18, color: '#1e293b', lineHeight: 26 },
-  button: { backgroundColor: '#2563eb', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  buttonText: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
-
-  bgDark: { backgroundColor: '#020617' },
-  textDark: { color: '#f8fafc' },
-  subTextDark: { color: '#94a3b8' },
-  cardDark: { backgroundColor: '#0f172a' },
-  btnDark: { backgroundColor: '#1e293b' },
-  btnTextDark: { color: '#cbd5e1' },
-  inputDark: { backgroundColor: '#0f172a', color: '#f8fafc' },
-});
+/** A faint dot grid on the stage: the floor the avatar stands on. */
+function DotGrid() {
+  const dots = [];
+  for (let y = 0; y < 14; y++) for (let x = 0; x < 18; x++) dots.push({ x: (x + 0.5) / 18, y: (y + 0.5) / 14 });
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+      {dots.map((d, i) => (
+        <View
+          key={i}
+          style={{
+            position: 'absolute',
+            left: `${d.x * 100}%`,
+            top: `${d.y * 100}%`,
+            width: 2,
+            height: 2,
+            borderRadius: 1,
+            backgroundColor: 'rgba(255,255,255,0.07)',
+          }}
+        />
+      ))}
+    </View>
+  );
+}
