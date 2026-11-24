@@ -265,7 +265,7 @@ function ConversationScreen({ sc, onSwitch }: { sc: Scenario; onSwitch: () => vo
         playing={phase === 'signing'}
         onWord={setSignWord}
         onDone={() => setPhase('done')}
-        style={{ position: 'absolute', top: 44, left: 0, right: 0, bottom: wide ? 150 : 118 }}
+        style={{ position: 'absolute', top: 12, left: 0, right: 0, bottom: wide ? 128 : 112 }}
       />
       <View style={{ position: 'absolute', top: space[4], left: space[4], flexDirection: 'row', gap: 8 }}>
         <View style={hudChip}>
