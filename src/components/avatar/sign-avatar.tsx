@@ -472,7 +472,10 @@ export default function SignAvatar({ glosses, playing, loop = false, speed = 1, 
       e.tt += dt;
       e.t += dt * (P.speed > 0 ? P.speed : 1);
       if (P.playing) {
-        while (e.word < e.tl.words.length && e.t >= e.tl.words[e.word]) P.onWord?.(e.word++);
+        while (e.word < e.tl.words.length && e.t >= e.tl.words[e.word]) {
+          const i = e.word++; // increment outside the optional call (it is skipped when onWord is absent)
+          P.onWord?.(i);
+        }
         if (e.t >= e.tl.end) {
           if (P.loop) {
             if (e.t >= e.tl.end + 0.7) {

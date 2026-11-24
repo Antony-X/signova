@@ -200,16 +200,49 @@ const explain: ClipDef = { dur: 1.35, d: circles(0), n: circles(Math.PI), h: [{ 
 // ---------------------------------------------------------------- extras
 
 const hello: ClipDef = {
-  dur: 1.1,
+  // Flat hand, fingertips at the temple (salute-like), then outward and forward with a small nod.
+  dur: 1.2,
   d: [
-    { t: 0, p: [0.26, -0.44, 0.22], hs: 'B', a: 34, tilt: 8, face: 20 },
-    { t: 0.3, p: [0.26, -0.45, 0.22] },
-    { t: 0.78, p: [0.58, -0.4, 0.48], a: 12, face: 0 },
-    { t: 1.1, p: [0.58, -0.4, 0.48] },
+    { t: 0, p: [0.52, -0.33, 0.3], hs: 'B', a: 50, tilt: -15, face: 25 },
+    { t: 0.3, p: [0.51, -0.34, 0.29] },
+    { t: 0.86, p: [0.76, -0.29, 0.56], a: 24, tilt: 6, face: 10 },
+    { t: 1.2, p: [0.76, -0.29, 0.56] },
   ],
   h: [
     { t: 0, pitch: 0 },
-    { t: 0.8, pitch: -3, roll: 3 },
+    { t: 0.35, pitch: 2, roll: 1 },
+    { t: 0.82, pitch: -5, roll: 3 },
+    { t: 1.2, pitch: -2, roll: 2 },
+  ],
+};
+
+/** The name, fingerspelled ე-ლ-ე-ნ-ე at shoulder height, drifting outward a little per letter. */
+function spell(): HK[] {
+  const E: Partial<HandPose> = { hs: 'C', a: 4, tilt: 6, face: 72 };
+  const letters: Partial<HandPose>[] = [
+    E,
+    { hs: 'L', a: 0, tilt: 4, face: 8 },
+    E,
+    { hs: 'N', a: 138, tilt: 14, face: 18 },
+    E,
+  ];
+  const keys: HK[] = [];
+  letters.forEach((L, i) => {
+    const x = 0.34 + i * 0.035;
+    const y = L.hs === 'N' ? 0.1 : 0.0;
+    const t0 = i * 0.35;
+    keys.push({ t: t0, ...L, p: [x, y, 0.4] });
+    keys.push({ t: t0 + 0.22, ...L, p: [x + 0.008, y, 0.41] });
+  });
+  keys.push({ t: 1.75, p: [0.34 + 4 * 0.035 + 0.01, 0.0, 0.41] });
+  return keys;
+}
+const elene: ClipDef = {
+  dur: 1.75,
+  d: spell(),
+  h: [
+    { t: 0, pitch: -2, yaw: -2 },
+    { t: 1.75, pitch: -3, yaw: -3, roll: 2 },
   ],
 };
 
@@ -296,6 +329,7 @@ const DEFS: Record<string, ClipDef> = {
   problem,
   explain,
   hello,
+  elene,
   thanks,
   question,
   yes,
@@ -313,6 +347,7 @@ export const GLOSSES: Record<string, { ka: string; en: string }> = {
   problem: { ka: 'ამოცანა', en: 'problem' },
   explain: { ka: 'ამიხსნათ', en: 'explain' },
   hello: { ka: 'გამარჯობა', en: 'hello' },
+  elene: { ka: 'ელენე', en: 'Elene' },
   thanks: { ka: 'მადლობა', en: 'thanks' },
   question: { ka: 'კითხვა', en: 'question' },
   yes: { ka: 'დიახ', en: 'yes' },

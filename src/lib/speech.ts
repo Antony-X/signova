@@ -94,22 +94,24 @@ export function warmVoices() {
 }
 
 /** The student's words as recorded Georgian audio (public/audio/s1..s5.mp3), so every browser speaks. */
-const clips: Record<number, HTMLAudioElement> = {};
+const clips: Record<string, HTMLAudioElement> = {};
 
-export function preloadWords(n: number) {
+export function preloadWords(prefix: string, n: number) {
   if (Platform.OS !== 'web' || typeof Audio === 'undefined') return;
   for (let i = 1; i <= n; i++) {
-    if (clips[i]) continue;
-    const a = new Audio(assetUrl(`audio/s${i}.mp3`));
+    const key = `${prefix}${i}`;
+    if (clips[key]) continue;
+    const a = new Audio(assetUrl(`audio/${key}.mp3`));
     a.preload = 'auto';
-    clips[i] = a;
+    clips[key] = a;
   }
 }
 
-export function playWord(i: number) {
+export function playWord(prefix: string, i: number) {
   if (Platform.OS !== 'web' || typeof Audio === 'undefined') return;
-  const a = clips[i] ?? new Audio(assetUrl(`audio/s${i}.mp3`));
-  clips[i] = a;
+  const key = `${prefix}${i}`;
+  const a = clips[key] ?? new Audio(assetUrl(`audio/${key}.mp3`));
+  clips[key] = a;
   try {
     a.currentTime = 0;
     void a.play().catch(() => {});

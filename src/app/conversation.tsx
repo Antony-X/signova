@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import SignAvatar from '@/components/avatar-slot';
 import PoseCamera, { type PoseStats } from '@/components/pose-slot';
 import { Button, Enter, LiveDot, Txt, webTransition } from '@/components/ui';
-import { STUDENT, TEACHER, TEACHER_SIGNS, TEACHER_WORDS } from '@/demo/script';
+import { DEFAULT_SCENARIO, SCENARIOS, type Scenario, type Sign } from '@/demo/script';
 import { BARS, useMicLevel } from '@/hooks/use-mic-level';
 import { useTalk } from '@/i18n/talk';
 import { listenWords, playWord, preloadWords, stopSpeaking } from '@/lib/speech';
@@ -24,10 +24,20 @@ import { LIME, radius, space, type } from '@/theme/tokens';
 
 type Phase = 'ready' | 'reading' | 'translated' | 'listening' | 'signing' | 'done';
 
-const STUDENT_WORDS = STUDENT.ka.split(' ');
-const STUDENT_SECONDS = 6;
 
-export default function ConversationScreen() {
+/** Key S switches between the demo conversations (hidden, for whoever records the demo). */
+export default function ConversationRoute() {
+  const [id, setId] = useState<Scenario['id']>(DEFAULT_SCENARIO);
+  return <ConversationScreen key={id} sc={SCENARIOS[id]} onSwitch={() => setId((x) => (x === 'greeting' ? 'problem' : 'greeting'))} />;
+}
+
+function ConversationScreen({ sc, onSwitch }: { sc: Scenario; onSwitch: () => void }) {
+  const STUDENT = sc.student;
+  const TEACHER = sc.teacher;
+  const TEACHER_SIGNS = sc.teacherSigns;
+  const TEACHER_WORDS = TEACHER_SIGNS.map((x) => x.ka);
+  const STUDENT_WORDS = STUDENT.ka.split(' ');
+  const STUDENT_SECONDS = sc.studentSeconds;
   const { c, wide, width, lang, setLang } = useApp();
   const s = useTalk();
   const router = useRouter();
@@ -59,7 +69,7 @@ export default function ConversationScreen() {
     studentRef.current += 1;
     const k = studentRef.current;
     setStudentN(k);
-    playWord(k); // the teacher hears each word as it is read (Georgian voice, bundled audio)
+    playWord(sc.audio, k); // the teacher hears each word as it is read (Georgian voice, bundled audio)
     if (k === STUDENT_WORDS.length) {
       setConfidence(0.91 + Math.random() * 0.06);
       setTimeout(() => setPhase((p) => (p === 'reading' ? 'translated' : p)), 900);
@@ -204,13 +214,14 @@ export default function ConversationScreen() {
         if (phaseRef.current === 'listening') addTeacherWord();
         else startTeacher();
       } else if (e.key === 'r' || e.key === 'R') reset();
+      else if (e.key === 's' || e.key === 'S') onSwitch();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [next, reset, startStudent, startTeacher, addStudentWord, addTeacherWord]);
 
   useEffect(() => {
-    preloadWords(STUDENT_WORDS.length);
+    preloadWords(sc.audio, STUDENT_WORDS.length);
     return () => stopSpeaking();
   }, []);
 
@@ -267,7 +278,7 @@ export default function ConversationScreen() {
       {phase === 'listening' ? (
         <Meter levels={levels} label={s.listening} />
       ) : (
-        <SignCards revealed={teacherN} active={phase === 'signing' ? signWord : -1} compact={!wide} ka={lang === 'ka'} />
+        <SignCards signs={TEACHER_SIGNS} revealed={teacherN} active={phase === 'signing' ? signWord : -1} compact={!wide} ka={lang === 'ka'} />
       )}
     </View>
   );
@@ -612,7 +623,7 @@ function Steps({ names, step, compact }: { names: string[]; step: number; compac
   );
 }
 
-function SignCards({ revealed, active, compact, ka }: { revealed: number; active: number; compact?: boolean; ka?: boolean }) {
+function SignCards({ signs: TEACHER_SIGNS, revealed, active, compact, ka }: { signs: Sign[]; revealed: number; active: number; compact?: boolean; ka?: boolean }) {
   if (revealed === 0) return null;
   const cur = active >= 0 ? TEACHER_SIGNS[active] : null;
   return (

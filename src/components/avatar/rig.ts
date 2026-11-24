@@ -123,6 +123,20 @@ const SHAPES_RAW = {
     f: [[-11, 25, 80, 40], [7, 25, 80, 40], FIST[2], FIST[3]] as Fingers,
     t: THUMB_ACROSS,
   },
+  /** Index up, thumb straight out. */
+  L: {
+    f: [[-3, 0, 2, 0], FIST[1], FIST[2], FIST[3]] as Fingers,
+    t: [
+      [-0.112, -0.085, 0.02],
+      [-0.168, -0.098, 0.02],
+      [-0.212, -0.107, 0.02],
+    ] as V3[],
+  },
+  /** Index and middle together and straight (pointed down by turning the hand). */
+  N: {
+    f: [[-2, 6, 4, 0], [1, 6, 4, 0], FIST[2], FIST[3]] as Fingers,
+    t: THUMB_ACROSS,
+  },
   /** Thumb and little finger out, the other three closed. */
   Y: {
     f: [FIST[0], FIST[1], FIST[2], [24, 0, 4, 2]] as Fingers,
