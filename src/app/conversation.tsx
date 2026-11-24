@@ -18,13 +18,14 @@ import { Button, Enter, LiveDot, Txt, webTransition } from '@/components/ui';
 import { STUDENT, TEACHER, TEACHER_SIGNS, TEACHER_WORDS } from '@/demo/script';
 import { BARS, useMicLevel } from '@/hooks/use-mic-level';
 import { useTalk } from '@/i18n/talk';
-import { listenWords, say, stopSpeaking, warmVoices } from '@/lib/speech';
+import { listenWords, playWord, preloadWords, stopSpeaking } from '@/lib/speech';
 import { useApp } from '@/theme/app-context';
 import { LIME, radius, space, type } from '@/theme/tokens';
 
 type Phase = 'ready' | 'reading' | 'translated' | 'listening' | 'signing' | 'done';
 
 const STUDENT_WORDS = STUDENT.ka.split(' ');
+const STUDENT_SECONDS = 6;
 
 export default function ConversationScreen() {
   const { c, wide, width, lang, setLang } = useApp();
@@ -58,7 +59,7 @@ export default function ConversationScreen() {
     studentRef.current += 1;
     const k = studentRef.current;
     setStudentN(k);
-    say(STUDENT_WORDS[k - 1].replace('?', ''), 'ka'); // the teacher hears each word as it is read
+    playWord(k); // the teacher hears each word as it is read (Georgian voice, bundled audio)
     if (k === STUDENT_WORDS.length) {
       setConfidence(0.91 + Math.random() * 0.06);
       setTimeout(() => setPhase((p) => (p === 'reading' ? 'translated' : p)), 900);
@@ -67,38 +68,13 @@ export default function ConversationScreen() {
 
   useEffect(() => {
     if (phase !== 'reading') return;
-    let moving = false;
-    let movedFor = 0;
-    let stillFor = 0;
-    let sinceWord = 0;
-    let last = Date.now();
+    // The question takes about 6 seconds to sign: one word every 1.2 s.
     const id = setInterval(() => {
-      const now = Date.now();
-      const dt = Math.min(0.4, (now - last) / 1000);
-      last = now;
-      sinceWord += dt;
-      const st = stats.current;
-      const m = st && st.hands > 0 ? st.motion : 0;
-      if (m > 0.28) {
-        moving = true;
-        movedFor += dt;
-        stillFor = 0;
-      } else if (m < 0.14) {
-        stillFor += dt;
-      }
-      const endOfSign = moving && movedFor >= 0.35 && stillFor >= 0.3;
-      const longSign = moving && movedFor >= 1.6;
-      if ((endOfSign || longSign) && sinceWord >= 0.5) {
-        addStudentWord();
-        moving = false;
-        movedFor = 0;
-        stillFor = 0;
-        sinceWord = 0;
-      }
-    }, 100);
+      addStudentWord();
+      if (studentRef.current >= STUDENT_WORDS.length) clearInterval(id);
+    }, STUDENT_SECONDS * 1000 / STUDENT_WORDS.length);
     return () => clearInterval(id);
   }, [phase, addStudentWord]);
-
 
   // ---- 2. the teacher speaks: one word per spoken word. Word edges come from the voice level
   // (a burst, then a short dip) and from live speech recognition where the browser has it.
@@ -234,7 +210,7 @@ export default function ConversationScreen() {
   }, [next, reset, startStudent, startTeacher, addStudentWord, addTeacherWord]);
 
   useEffect(() => {
-    warmVoices();
+    preloadWords(STUDENT_WORDS.length);
     return () => stopSpeaking();
   }, []);
 

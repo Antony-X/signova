@@ -1,6 +1,8 @@
 /** Read a line aloud with the browser's speech voices, when a voice for the language exists. */
 import { Platform } from 'react-native';
 
+import { assetUrl } from '@/lib/base-url';
+
 function voices(): SpeechSynthesisVoice[] {
   if (Platform.OS !== 'web' || typeof window === 'undefined' || !('speechSynthesis' in window)) return [];
   // Natural (neural) voices first, e.g. Edge's "Microsoft Eka Online (Natural) - Georgian".
@@ -37,6 +39,11 @@ export function say(text: string, lang: 'ka' | 'en') {
 
 export function stopSpeaking() {
   if (Platform.OS === 'web' && typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+  Object.values(clips).forEach((a) => {
+    try {
+      a.pause();
+    } catch {}
+  });
 }
 
 /**
@@ -83,4 +90,27 @@ export function warmVoices() {
   if (Platform.OS !== 'web' || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
   window.speechSynthesis.getVoices();
   window.speechSynthesis.addEventListener?.('voiceschanged', () => window.speechSynthesis.getVoices());
+}
+
+/** The student's words as recorded Georgian audio (public/audio/s1..s5.mp3), so every browser speaks. */
+const clips: Record<number, HTMLAudioElement> = {};
+
+export function preloadWords(n: number) {
+  if (Platform.OS !== 'web' || typeof Audio === 'undefined') return;
+  for (let i = 1; i <= n; i++) {
+    if (clips[i]) continue;
+    const a = new Audio(assetUrl(`audio/s${i}.mp3`));
+    a.preload = 'auto';
+    clips[i] = a;
+  }
+}
+
+export function playWord(i: number) {
+  if (Platform.OS !== 'web' || typeof Audio === 'undefined') return;
+  const a = clips[i] ?? new Audio(assetUrl(`audio/s${i}.mp3`));
+  clips[i] = a;
+  try {
+    a.currentTime = 0;
+    void a.play().catch(() => {});
+  } catch {}
 }
