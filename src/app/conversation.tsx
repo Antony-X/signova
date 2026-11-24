@@ -18,7 +18,7 @@ import { Button, Enter, LiveDot, Txt, webTransition } from '@/components/ui';
 import { STUDENT, TEACHER, TEACHER_SIGNS, TEACHER_WORDS } from '@/demo/script';
 import { BARS, useMicLevel } from '@/hooks/use-mic-level';
 import { useTalk } from '@/i18n/talk';
-import { speak, stopSpeaking, warmVoices } from '@/lib/speech';
+import { listenWords, say, stopSpeaking, warmVoices } from '@/lib/speech';
 import { useApp } from '@/theme/app-context';
 import { LIME, radius, space, type } from '@/theme/tokens';
 
@@ -33,6 +33,8 @@ export default function ConversationScreen() {
   const insets = useSafeAreaInsets();
 
   const [phase, setPhase] = useState<Phase>('ready');
+  const phaseRef = useRef<Phase>('ready');
+  phaseRef.current = phase;
   const [studentN, setStudentN] = useState(0); // revealed student words
   const [teacherN, setTeacherN] = useState(0); // revealed teacher words
   const [signWord, setSignWord] = useState(-1);
@@ -48,82 +50,156 @@ export default function ConversationScreen() {
   const watching = phase === 'signing' || phase === 'done';
   const step = studentTurn ? 0 : teacherTurn ? 1 : 2;
 
-  // ---- 1. the student signs: reveal words as the hands move (with a fallback clock).
+  // ---- 1. the student signs: one word per sign. A sign is a burst of hand motion that ends in a
+  // pause (or runs long). Key 1 / Space during the turn adds the next word by hand.
+  const studentRef = useRef(0);
+  const addStudentWord = useCallback(() => {
+    if (studentRef.current >= STUDENT_WORDS.length) return;
+    studentRef.current += 1;
+    const k = studentRef.current;
+    setStudentN(k);
+    say(STUDENT_WORDS[k - 1].replace('?', ''), 'ka'); // the teacher hears each word as it is read
+    if (k === STUDENT_WORDS.length) {
+      setConfidence(0.91 + Math.random() * 0.06);
+      setTimeout(() => setPhase((p) => (p === 'reading' ? 'translated' : p)), 900);
+    }
+  }, []);
+
   useEffect(() => {
     if (phase !== 'reading') return;
-    let evidence = -0.6; // a beat before the first word
-    let n = 0;
-    let last = Date.now();
-    const id = setInterval(() => {
-      const now = Date.now();
-      const dt = Math.min(0.4, (now - last) / 1000); // wall clock, so a busy CPU never stalls it
-      last = now;
-      const st = stats.current;
-      const moving = st && st.hands > 0 && st.motion > 0.12;
-      evidence += dt * (moving ? 1 : 0.7);
-      if (evidence >= 0.62 && n < STUDENT_WORDS.length) {
-        evidence = 0;
-        n += 1;
-        setStudentN(n);
-        if (n === STUDENT_WORDS.length) {
-          setConfidence(0.91 + Math.random() * 0.06);
-          setTimeout(() => setPhase('translated'), 650);
-        }
-      }
-    }, 100);
-    return () => clearInterval(id);
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase === 'translated') speak(STUDENT.ka, 'ka');
-  }, [phase]);
-
-  // ---- 2. the teacher speaks: reveal words with the voice level.
-  useEffect(() => {
-    if (phase !== 'listening') return;
-    let evidence = -0.5;
-    let n = 0;
+    let moving = false;
+    let movedFor = 0;
+    let stillFor = 0;
+    let sinceWord = 0;
     let last = Date.now();
     const id = setInterval(() => {
       const now = Date.now();
       const dt = Math.min(0.4, (now - last) / 1000);
       last = now;
-      const loud = levelRef.current > 0.1;
-      evidence += dt * (loud ? 1 : 0.3);
-      if (evidence >= 0.5 && n < TEACHER_WORDS.length) {
-        evidence = 0;
-        n += 1;
-        setTeacherN(n);
-        if (n === TEACHER_WORDS.length) setTimeout(() => setPhase('signing'), 800);
+      sinceWord += dt;
+      const st = stats.current;
+      const m = st && st.hands > 0 ? st.motion : 0;
+      if (m > 0.28) {
+        moving = true;
+        movedFor += dt;
+        stillFor = 0;
+      } else if (m < 0.14) {
+        stillFor += dt;
+      }
+      const endOfSign = moving && movedFor >= 0.35 && stillFor >= 0.3;
+      const longSign = moving && movedFor >= 1.6;
+      if ((endOfSign || longSign) && sinceWord >= 0.5) {
+        addStudentWord();
+        moving = false;
+        movedFor = 0;
+        stillFor = 0;
+        sinceWord = 0;
       }
     }, 100);
     return () => clearInterval(id);
-  }, [phase, levelRef]);
+  }, [phase, addStudentWord]);
+
+
+  // ---- 2. the teacher speaks: one word per spoken word. Word edges come from the voice level
+  // (a burst, then a short dip) and from live speech recognition where the browser has it.
+  // Key 2 during the turn adds the next word by hand.
+  const teacherRef = useRef(0);
+  const addTeacherWord = useCallback((to?: number) => {
+    const target = Math.min(TEACHER_WORDS.length, to ?? teacherRef.current + 1);
+    if (target <= teacherRef.current) return;
+    teacherRef.current = target;
+    setTeacherN(target);
+  }, []);
+
+  useEffect(() => {
+    if (phase !== 'listening') return;
+    let on = false;
+    let onFor = 0;
+    let offFor = 0;
+    let silence = 0;
+    let sinceWord = 0;
+    let last = Date.now();
+    const stopRec = listenWords('ka-GE', (n) => addTeacherWord(n));
+    const id = setInterval(() => {
+      const now = Date.now();
+      const dt = Math.min(0.2, (now - last) / 1000);
+      last = now;
+      sinceWord += dt;
+      const v = levelRef.current;
+      if (v > 0.2) {
+        on = true;
+        onFor += dt;
+        offFor = 0;
+        silence = 0;
+      } else if (v < 0.11) {
+        offFor += dt;
+        silence += dt;
+      }
+      if (on && sinceWord >= 0.25 && ((onFor >= 0.18 && offFor >= 0.13) || onFor >= 0.8)) {
+        addTeacherWord();
+        sinceWord = 0;
+        if (offFor >= 0.13) on = false;
+        onFor = 0;
+      }
+      const n = teacherRef.current;
+      // The teacher has finished: every word in and a pause, or a long pause after some words.
+      if ((n >= TEACHER_WORDS.length && silence >= 0.6) || (n >= 1 && silence >= 1.5)) {
+        addTeacherWord(TEACHER_WORDS.length);
+        clearInterval(id);
+        setTimeout(() => setPhase((p) => (p === 'listening' ? 'signing' : p)), 500);
+      }
+    }, 50);
+    return () => {
+      clearInterval(id);
+      stopRec?.();
+    };
+  }, [phase, levelRef, addTeacherWord]);
 
   // ---- actions
   const reset = useCallback(() => {
     stopSpeaking();
     setPhase('ready');
+    studentRef.current = 0;
+    teacherRef.current = 0;
     setStudentN(0);
     setTeacherN(0);
     setSignWord(-1);
   }, []);
 
+  const startStudent = useCallback(() => {
+    stopSpeaking();
+    studentRef.current = 0;
+    teacherRef.current = 0;
+    setStudentN(0);
+    setTeacherN(0);
+    setSignWord(-1);
+    setPhase('reading');
+  }, []);
+
+  const startTeacher = useCallback(() => {
+    stopSpeaking();
+    studentRef.current = STUDENT_WORDS.length;
+    setStudentN(STUDENT_WORDS.length);
+    teacherRef.current = 0;
+    setTeacherN(0);
+    setSignWord(-1);
+    setReplayKey((k) => k + 1);
+    setPhase('listening');
+  }, []);
+
   const next = useCallback(() => {
     switch (phase) {
       case 'ready':
-        setPhase('reading');
+        startStudent();
         break;
       case 'reading':
-        setStudentN(STUDENT_WORDS.length);
-        setPhase('translated');
+        addStudentWord();
         break;
       case 'translated':
-        stopSpeaking();
-        setPhase('listening');
+        startTeacher();
         break;
       case 'listening':
-        setTeacherN(TEACHER_WORDS.length);
+        addTeacherWord(TEACHER_WORDS.length);
         setPhase('signing');
         break;
       case 'signing':
@@ -133,7 +209,7 @@ export default function ConversationScreen() {
         setPhase('signing');
         break;
     }
-  }, [phase]);
+  }, [phase, startStudent, startTeacher, addStudentWord, addTeacherWord]);
 
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
@@ -144,25 +220,18 @@ export default function ConversationScreen() {
         e.preventDefault();
         next();
       } else if (e.key === '1') {
-        // The student's question: read from the signing now.
-        stopSpeaking();
-        setStudentN(0);
-        setTeacherN(0);
-        setSignWord(-1);
-        setPhase('reading');
+        // The student's turn: start reading signs; during the turn, add the next word.
+        if (phaseRef.current === 'reading') addStudentWord();
+        else startStudent();
       } else if (e.key === '2') {
-        // The teacher's answer: listen, then the avatar signs it.
-        stopSpeaking();
-        setStudentN(STUDENT_WORDS.length);
-        setTeacherN(0);
-        setSignWord(-1);
-        setReplayKey((k) => k + 1);
-        setPhase('listening');
+        // The teacher's turn: start listening; during the turn, add the next word.
+        if (phaseRef.current === 'listening') addTeacherWord();
+        else startTeacher();
       } else if (e.key === 'r' || e.key === 'R') reset();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [next, reset]);
+  }, [next, reset, startStudent, startTeacher, addStudentWord, addTeacherWord]);
 
   useEffect(() => {
     warmVoices();

@@ -5,9 +5,9 @@
  *
  * Driven by requestAnimationFrame. The parent provides the dark stage behind it.
  */
-import { memo, useEffect, useId, useReducer, useRef, useState, type JSX } from 'react';
+import { memo, useEffect, useId, useMemo, useReducer, useRef, useState, type JSX } from 'react';
 import { View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { Defs, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, G, LinearGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { LIME } from '@/theme/tokens';
 import { clipFor, GLOSSES, REST_POSE } from './clips';
@@ -189,8 +189,9 @@ const PALM = [0, 1, 5, 9, 13, 17];
 // ---------------------------------------------------------------- drawing
 
 const CORE = '#ffffff';
+const STAGE = '#0a0a0a';
 
-/** Static backdrop: a faint dot grid fading out from the figure and a soft light behind the chest. */
+/** Static backdrop: a faint dot grid fading out from the figure, a soft light and a floor shadow. */
 const Backdrop = memo(function Backdrop({ v, gid }: { v: View2; gid: string }) {
   const g = Math.max(14, Math.round(v.sc * 0.16));
   const cx = v.ox;
@@ -210,82 +211,194 @@ const Backdrop = memo(function Backdrop({ v, gid }: { v: View2; gid: string }) {
     <>
       <Defs>
         <RadialGradient id={`glow${gid}`} cx={cx} cy={cy} r={R} gradientUnits="userSpaceOnUse">
-          <Stop offset="0" stopColor="#ffffff" stopOpacity={0.05} />
-          <Stop offset="0.6" stopColor="#ffffff" stopOpacity={0.018} />
+          <Stop offset="0" stopColor="#ffffff" stopOpacity={0.06} />
+          <Stop offset="0.6" stopColor="#ffffff" stopOpacity={0.02} />
           <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
         </RadialGradient>
-        <LinearGradient id={`torso${gid}`} x1={0} y1={v.oy - 0.2 * v.sc} x2={0} y2={v.oy + 1.36 * v.sc} gradientUnits="userSpaceOnUse">
-          <Stop offset="0" stopColor={LIME} stopOpacity={0.3} />
-          <Stop offset="0.55" stopColor={LIME} stopOpacity={0.15} />
-          <Stop offset="1" stopColor={LIME} stopOpacity={0} />
+        <RadialGradient id={`shadow${gid}`} cx="50%" cy="50%" r="50%">
+          <Stop offset="0" stopColor="#000000" stopOpacity={0.8} />
+          <Stop offset="1" stopColor="#000000" stopOpacity={0} />
+        </RadialGradient>
+        <LinearGradient id={`torso${gid}`} x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor="#5c5c5c" />
+          <Stop offset="0.5" stopColor="#bdbdbd" />
+          <Stop offset="1" stopColor="#5c5c5c" />
+        </LinearGradient>
+        <LinearGradient id={`fade${gid}`} x1="0" y1={v.oy + 0.9 * v.sc} x2="0" y2={v.oy + 1.38 * v.sc} gradientUnits="userSpaceOnUse">
+          <Stop offset="0" stopColor={STAGE} stopOpacity={0} />
+          <Stop offset="1" stopColor={STAGE} stopOpacity={0.94} />
+        </LinearGradient>
+        <RadialGradient id={`head${gid}`} cx="36%" cy="30%" r="78%">
+          <Stop offset="0" stopColor="#e8e8e8" />
+          <Stop offset="0.55" stopColor="#8a8a8a" />
+          <Stop offset="1" stopColor="#4a4a4a" />
+        </RadialGradient>
+        <RadialGradient id={`ball${gid}`} cx="36%" cy="32%" r="70%">
+          <Stop offset="0" stopColor="#d6d6d6" />
+          <Stop offset="0.6" stopColor="#8c8c8c" />
+          <Stop offset="1" stopColor="#4e4e4e" />
+        </RadialGradient>
+        <LinearGradient id={`palm${gid}`} x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor="#f2f2f2" />
+          <Stop offset="1" stopColor="#a8a8a8" />
         </LinearGradient>
       </Defs>
       <Rect x={0} y={0} width={v.W} height={v.H} fill={`url(#glow${gid})`} />
-      <Path d={rings[0]} fill="#ffffff" fillOpacity={0.11} />
-      <Path d={rings[1]} fill="#ffffff" fillOpacity={0.065} />
-      <Path d={rings[2]} fill="#ffffff" fillOpacity={0.03} />
+      <Path d={rings[0]} fill="#ffffff" fillOpacity={0.1} />
+      <Path d={rings[1]} fill="#ffffff" fillOpacity={0.06} />
+      <Path d={rings[2]} fill="#ffffff" fillOpacity={0.028} />
+      <Ellipse cx={v.ox} cy={v.oy + 1.36 * v.sc} rx={1.0 * v.sc} ry={0.13 * v.sc} fill={`url(#shadow${gid})`} />
     </>
   );
 });
 
-function Figure({ fr, tr, now, v, gid }: { fr: Frame; tr: Trail | null; now: number; v: View2; gid: string }) {
-  const w = v.w;
-  const B = fr.body;
-  const torso =
-    smoothPath(fr.torso, [0, 1, 2], v) +
-    smoothPath(fr.torso, [3, 4, 5, 6], v) +
-    smoothPath(fr.torso, [7, 8, 9], v) +
-    smoothPath(fr.torso, [10, 11, 12, 13], v);
-  const bones = poly(B, [2, 0, 3], v) + poly(B, [0, 1], v) + poly(B, [2, 4], v) + poly(B, [3, 5], v);
-  // forearms end at the wrists, which are the hands' landmark 0
-  const fx = (h: number) => r1(v.ox + fr.hands[h][0] * v.sc) + ',' + r1(v.oy + fr.hands[h][1] * v.sc);
-  const fore = `M${r1(v.ox + B[8] * v.sc)},${r1(v.oy + B[9] * v.sc)}L${fx(0)}M${r1(v.ox + B[10] * v.sc)},${r1(v.oy + B[11] * v.sc)}L${fx(1)}`;
-  const joints = dots(B, [0, 2, 3, 4, 5], w * 1.45, v);
-  const jointCores = dots(B, [0, 2, 3, 4, 5], w * 0.72, v);
-  const face = poly(fr.face, [0, 1, 2, 3, 4, 5, 6], v) + poly(fr.face, [7, 8, 9, 10, 11, 12, 13], v);
-  const order = fr.handZ[0] <= fr.handZ[1] ? [0, 1] : [1, 0];
+const px = (pts: Float32Array, i: number, v: View2) => v.ox + pts[i * 2] * v.sc;
+const py = (pts: Float32Array, i: number, v: View2) => v.oy + pts[i * 2 + 1] * v.sc;
 
+/** A capsule segment; with `off`, the same line nudged toward the light (top-left) for a highlight. */
+function seg(ax: number, ay: number, bx: number, by: number, off = 0): string {
+  if (off) {
+    let nx = -(by - ay);
+    let ny = bx - ax;
+    const l = Math.hypot(nx, ny) || 1;
+    nx /= l;
+    ny /= l;
+    if (nx + ny > 0) {
+      nx = -nx;
+      ny = -ny;
+    }
+    ax += nx * off;
+    ay += ny * off;
+    bx += nx * off;
+    by += ny * off;
+  }
+  return `M${r1(ax)},${r1(ay)}L${r1(bx)},${r1(by)}`;
+}
+
+function chainSeg(pts: Float32Array, idx: number[], v: View2, off = 0): string {
+  let d = '';
+  for (let k = 0; k < idx.length - 1; k++) d += seg(px(pts, idx[k], v), py(pts, idx[k], v), px(pts, idx[k + 1], v), py(pts, idx[k + 1], v), off);
+  return d;
+}
+
+/** Pinky to thumb, so nearer-the-thumb fingers draw over their neighbours. */
+const FINGERS = [
+  [17, 18, 19, 20],
+  [13, 14, 15, 16],
+  [9, 10, 11, 12],
+  [5, 6, 7, 8],
+  [1, 2, 3, 4],
+];
+
+function Arm({ B, H, side, v, gid }: { B: Float32Array; H: Float32Array; side: number; v: View2; gid: string }) {
+  const sx = px(B, 2 + side, v),
+    sy = py(B, 2 + side, v),
+    ex = px(B, 4 + side, v),
+    ey = py(B, 4 + side, v),
+    wx = px(H, 0, v),
+    wy = py(H, 0, v);
+  const tu = 0.26 * v.sc;
+  const tf = 0.21 * v.sc;
+  const up = seg(sx, sy, ex, ey);
+  const fo = seg(ex, ey, wx, wy);
   return (
     <>
-      <Path d={torso} stroke={`url(#torso${gid})`} strokeWidth={w * 0.7} fill="none" strokeLinecap="round" />
-      <Path d={bones + fore} stroke={LIME} strokeOpacity={0.75} strokeWidth={w} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <Path d={ellipse(fr.head, v)} stroke={LIME} strokeOpacity={0.75} strokeWidth={w} fill={LIME} fillOpacity={0.03} />
-      <Path d={face} stroke={LIME} strokeOpacity={0.2} strokeWidth={w * 0.6} fill="none" strokeLinecap="round" />
-      <Path d={joints} fill={LIME} />
-      <Path d={jointCores} fill={CORE} />
-      {order.map((h) => {
-        const H = fr.hands[h];
-        const trails = tr ? trailPaths(tr, now, h, v) : null;
-        let chains = '';
-        for (const c of HAND_CHAINS) chains += poly(H, c, v);
+      <Path d={up} stroke="#262626" strokeWidth={tu + 2} strokeLinecap="round" />
+      <Path d={fo} stroke="#262626" strokeWidth={tf + 2} strokeLinecap="round" />
+      <Path d={up} stroke="#7a7a7a" strokeWidth={tu} strokeLinecap="round" />
+      <Path d={fo} stroke="#848484" strokeWidth={tf} strokeLinecap="round" />
+      <Path d={seg(sx, sy, ex, ey, tu * 0.2)} stroke="#c4c4c4" strokeOpacity={0.7} strokeWidth={tu * 0.38} strokeLinecap="round" />
+      <Path d={seg(ex, ey, wx, wy, tf * 0.2)} stroke="#c8c8c8" strokeOpacity={0.7} strokeWidth={tf * 0.38} strokeLinecap="round" />
+      <Circle cx={ex} cy={ey} r={tf * 0.56} fill={`url(#ball${gid})`} />
+      <Circle cx={sx} cy={sy} r={tu * 0.56} fill={`url(#ball${gid})`} />
+    </>
+  );
+}
+
+function Hand({ H, v, gid }: { H: Float32Array; v: View2; gid: string }) {
+  const t = 0.066 * v.sc;
+  const rim = Math.max(1.2, v.w * 0.6);
+  const palm = poly(H, PALM, v, true);
+  const fingers = FINGERS.map((f, i) => (i === 4 ? [1, ...f] : f));
+  const all = fingers.map((f) => chainSeg(H, f, v)).join('');
+  return (
+    <>
+      <Path d={palm} fill={LIME} stroke={LIME} strokeWidth={t * 0.9 + rim * 2} strokeLinejoin="round" />
+      <Path d={all} stroke={LIME} strokeWidth={t + rim * 2} strokeLinecap="round" strokeLinejoin="round" />
+      <Path d={palm} fill={`url(#palm${gid})`} stroke="#c6c6c6" strokeWidth={t * 0.9} strokeLinejoin="round" />
+      {fingers.map((f, i) => {
+        const d = chainSeg(H, f, v);
         return (
-          <HandGroup
-            key={h}
-            trails={trails}
-            palm={poly(H, PALM, v, true)}
-            chains={chains}
-            joints={dots(H, HAND_JOINTS, w * 0.62, v)}
-            tips={dots(H, HAND_TIPS, w * 1.15, v)}
-            cores={dots(H, HAND_TIPS, w * 0.55, v)}
-            w={w}
-          />
+          <G key={i}>
+            <Path d={d} stroke="#3a3a3a" strokeWidth={t + 1.2} strokeLinecap="round" strokeLinejoin="round" />
+            <Path d={d} stroke="#b4b4b4" strokeWidth={t} strokeLinecap="round" strokeLinejoin="round" />
+            <Path d={chainSeg(H, f, v, t * 0.16)} stroke="#f2f2f2" strokeOpacity={0.85} strokeWidth={t * 0.38} strokeLinecap="round" />
+          </G>
         );
       })}
     </>
   );
 }
 
-function HandGroup(p: { trails: string[] | null; palm: string; chains: string; joints: string; tips: string; cores: string; w: number }) {
+function Figure({ fr, tr, now, v, gid }: { fr: Frame; tr: Trail | null; now: number; v: View2; gid: string }) {
+  const w = v.w;
+  const B = fr.body;
+  const T = fr.torso;
+  const torso = smoothPath(T, [0, 1, 2, 3, 4, 5, 6, 13, 12, 11, 10, 9, 8, 7, 0], v) + 'Z';
+  const rimLight = smoothPath(T, [9, 10, 11, 12, 13], v);
+  const neck = seg(px(B, 0, v), py(B, 0, v) + 0.04 * v.sc, px(B, 1, v), py(B, 1, v));
+  const hd = fr.head;
+  const hr = new Float32Array(10);
+  for (let i = 0; i < 5; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 4 + (hd[4] * Math.PI) / 180;
+    hr[i * 2] = hd[0] + hd[2] * Math.cos(a);
+    hr[i * 2 + 1] = hd[1] + hd[3] * Math.sin(a);
+  }
+  const order = fr.handZ[0] <= fr.handZ[1] ? [0, 1] : [1, 0];
+
+  // the tracked skeleton, faint on top
+  const fx = (h: number) => r1(px(fr.hands[h], 0, v)) + ',' + r1(py(fr.hands[h], 0, v));
+  const bones =
+    poly(B, [2, 0, 3], v) +
+    poly(B, [0, 1], v) +
+    poly(B, [2, 4], v) +
+    poly(B, [3, 5], v) +
+    `M${r1(px(B, 4, v))},${r1(py(B, 4, v))}L${fx(0)}M${r1(px(B, 5, v))},${r1(py(B, 5, v))}L${fx(1)}`;
+  let chains = '';
+  let tips = '';
+  for (let h = 0; h < 2; h++) {
+    for (const c of HAND_CHAINS) chains += poly(fr.hands[h], c, v);
+    tips += dots(fr.hands[h], HAND_TIPS, w * 0.9, v);
+  }
+  const rimW = Math.max(1.2, w * 0.6);
+
   return (
     <>
-      {p.trails?.map((d, b) =>
-        d ? <Path key={b} d={d} stroke={LIME} strokeOpacity={BAND_ALPHA[b]} strokeWidth={p.w * 0.75} fill="none" strokeLinejoin="round" /> : null,
-      )}
-      <Path d={p.palm} fill={LIME} fillOpacity={0.08} />
-      <Path d={p.chains} stroke={LIME} strokeWidth={p.w * 0.78} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <Path d={p.joints} fill={LIME} />
-      <Path d={p.tips} fill={LIME} />
-      <Path d={p.cores} fill={CORE} />
+      <Path d={torso} fill={`url(#torso${gid})`} stroke="#262626" strokeWidth={1.5} />
+      <Path d={rimLight} stroke={LIME} strokeOpacity={0.3} strokeWidth={rimW} fill="none" strokeLinecap="round" />
+      <Rect x={0} y={v.oy + 0.9 * v.sc} width={v.W} height={v.H} fill={`url(#fade${gid})`} />
+      <Path d={neck} stroke="#262626" strokeWidth={0.17 * v.sc + 2} strokeLinecap="round" />
+      <Path d={neck} stroke="#7a7a7a" strokeWidth={0.17 * v.sc} strokeLinecap="round" />
+      <Path d={ellipse(hd, v)} fill={`url(#head${gid})`} stroke="#262626" strokeWidth={1.5} />
+      <Path d={smoothPath(hr, [0, 1, 2, 3, 4], v)} stroke={LIME} strokeOpacity={0.3} strokeWidth={rimW} fill="none" strokeLinecap="round" />
+      {order.map((h) => (
+        <Arm key={`a${h}`} B={B} H={fr.hands[h]} side={h} v={v} gid={gid} />
+      ))}
+      {order.map((h) => (
+        <Hand key={`h${h}`} H={fr.hands[h]} v={v} gid={gid} />
+      ))}
+      <Path d={bones} stroke={LIME} strokeOpacity={0.35} strokeWidth={w * 0.8} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <Path d={chains} stroke={LIME} strokeOpacity={0.35} strokeWidth={w * 0.5} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <Path d={dots(B, [0, 2, 3, 4, 5], w * 1.2, v)} fill={LIME} fillOpacity={0.45} />
+      <Path d={dots(B, [0, 2, 3, 4, 5], w * 0.55, v)} fill={CORE} fillOpacity={0.6} />
+      <Path d={tips} fill={LIME} fillOpacity={0.55} />
+      {tr
+        ? [0, 1].map((h) =>
+            trailPaths(tr, now, h, v).map((d, b) =>
+              d ? <Path key={`t${h}${b}`} d={d} stroke={LIME} strokeOpacity={BAND_ALPHA[b]} strokeWidth={w * 0.75} fill="none" strokeLinejoin="round" /> : null,
+            ),
+          )
+        : null}
     </>
   );
 }
@@ -388,7 +501,7 @@ export default function SignAvatar({ glosses, playing, loop = false, speed = 1, 
     };
   }, []);
 
-  const v = box ? fitView(box.W, box.H) : null;
+  const v = useMemo(() => (box ? fitView(box.W, box.H) : null), [box]);
   const e = eng.current;
   return (
     <View style={[{ overflow: 'hidden' }, style]} onLayout={onLayout} pointerEvents="none">
@@ -408,7 +521,7 @@ export default function SignAvatar({ glosses, playing, loop = false, speed = 1, 
 export function SignAvatarStill({ glosses, t, style }: { glosses: string[]; t: number; style?: StyleProp<ViewStyle> }): JSX.Element {
   const gid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [box, onLayout] = useBox();
-  const v = box ? fitView(box.W, box.H) : null;
+  const v = useMemo(() => (box ? fitView(box.W, box.H) : null), [box]);
   let fig: JSX.Element | null = null;
   if (v) {
     const tl = sequence(glosses, clonePose(REST_POSE));
