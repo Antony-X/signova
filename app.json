@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "signova-app",
+    "slug": "signova-app",
+    "version": "1.0.0",
+    "orientation": "default",
+    "scheme": "myapp",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "SIGNOVA нужен доступ к камере для перевода жестов."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
