@@ -153,7 +153,7 @@ export default function ConversationScreen() {
   }, []);
 
   const startTeacher = useCallback(() => {
-    stopSpeaking();
+    stopSpeaking(false); // let the student's last word finish
     studentRef.current = STUDENT_WORDS.length;
     setStudentN(STUDENT_WORDS.length);
     teacherRef.current = 0;

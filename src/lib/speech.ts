@@ -37,8 +37,9 @@ export function say(text: string, lang: 'ka' | 'en') {
   return true;
 }
 
-export function stopSpeaking() {
+export function stopSpeaking(clipsToo = true) {
   if (Platform.OS === 'web' && typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+  if (!clipsToo) return;
   Object.values(clips).forEach((a) => {
     try {
       a.pause();
