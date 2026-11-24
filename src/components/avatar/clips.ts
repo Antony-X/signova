@@ -223,7 +223,7 @@ function spell(): HK[] {
     E,
     { hs: 'L', a: 0, tilt: 4, face: 8 },
     E,
-    { hs: 'N', a: 138, tilt: 14, face: 18 },
+    { hs: 'N', a: 124, tilt: 14, face: 18 },
     E,
   ];
   const keys: HK[] = [];
@@ -232,7 +232,7 @@ function spell(): HK[] {
     const y = L.hs === 'N' ? 0.1 : 0.0;
     const t0 = i * 0.35;
     keys.push({ t: t0, ...L, p: [x, y, 0.4] });
-    keys.push({ t: t0 + 0.22, ...L, p: [x + 0.008, y, 0.41] });
+    keys.push({ t: t0 + 0.19, ...L, p: [x + 0.008, y, 0.41] });
   });
   keys.push({ t: 1.75, p: [0.34 + 4 * 0.035 + 0.01, 0.0, 0.41] });
   return keys;
